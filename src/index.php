@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Hello there</title>
+        <title>Laboratorium 9 Dmytro Shyamsnkyi</title>
         <style>
             body {
                 font-family: "Arial", sans-serif;
@@ -18,7 +18,6 @@
         </style>
     </head>
     <body>
-        <img src="https://tech.osteel.me/images/2020/03/04/hello.gif" alt="Hello there" class="center">
         <?php
         $connection = new PDO('mysql:host=mysql;dbname=demo;charset=utf8', 'root', 'root');
         $query      = $connection->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = 'demo'");
