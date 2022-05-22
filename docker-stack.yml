@@ -1,0 +1,88 @@
+version: "3.8"
+
+# Services
+services:
+  # Nginx Service
+  nginx:
+    image: nginx:1.21
+    ports:
+      - 80:80
+    volumes:
+      - ./src:/var/www/php
+      - ./.docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - php
+    deploy:
+      #replicas określia, czy usługa musi uruchomić określoną liczbę replik,
+      #czy powinna działać globalnie na każdym węźle roboczym
+      replicas: 1
+      update_config:
+        #skonfiguracja maksymalną liczbę zadań serwisowych,
+        #które harmonogram aktualizuje jednocześnie
+        parallelism: 2
+        #opóźnienie między aktualizacjami zadania serwisowego lub zestawów zadań
+        delay: 10s
+      #Konfiguruje, czy i jak ponownie uruchomić kontenery po ich wyjściu
+      restart_policy:
+        condition: on-failure #
+
+  # PHP Service
+  php:
+    build: ./.docker/php
+    working_dir: /var/www/php
+    volumes:
+      - ./src:/var/www/php
+    depends_on:
+      mysql:
+        condition: service_healthy
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  # MySQL Service
+  mysql:
+    image: mysql/mysql-server:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: demo
+    volumes:
+      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u root --password=$$MYSQL_ROOT_PASSWORD
+      interval: 5s
+      retries: 10
+    deploy:
+      placement:
+        #Manager nodes handle cluster management tasks:
+        #1) maintaining cluster state
+        #2) scheduling services
+        #3) serving swarm mode HTTP API endpoints
+        constraints: [node.role == manager]
+
+  # PhpMyAdmin Service
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5
+    ports:
+      - 8080:80
+    environment:
+      PMA_HOST: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+# Volumes
+volumes:
+  mysqldata:
